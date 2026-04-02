@@ -120,9 +120,7 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
-data/user-ct-test-collection-02.txt
-data/aol_sample.csv
-data/aol_queries_only.csv
+data/*
 pipeline_ready.csv
 pipeline_ready_base.csv
 output/
