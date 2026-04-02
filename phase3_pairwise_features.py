@@ -21,16 +21,12 @@ import pickle
 import random
 from collections import defaultdict
 from itertools import combinations
-
 import numpy as np
 from tqdm import tqdm
-import Levenshtein
+import Levenshtein # type: ignore
 
 
-# ---------------------------------------------------------------------------
 # CLI
-# ---------------------------------------------------------------------------
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 3: Pairwise Feature Computation")
     parser.add_argument("--features",       required=True,
@@ -48,10 +44,7 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
 # Similarity helpers
-# ---------------------------------------------------------------------------
-
 def jaccard(set_a, set_b):
     """Jaccard coefficient between two sets. Returns 0 if both empty."""
     if not set_a and not set_b:
@@ -68,10 +61,7 @@ def cosine_sim(a, b):
     return float(np.dot(a, b) / (na * nb))
 
 
-# ---------------------------------------------------------------------------
 # Core: compute 27 pairwise features for one (qi, qj) pair
-# ---------------------------------------------------------------------------
-
 def compute_pairwise_features(qi, qj):
     """
     Given two query feature dicts (from phase 2), return a dict of
@@ -83,43 +73,41 @@ def compute_pairwise_features(qi, qj):
     """
     feats = {}
 
-    # ---- STEP 16: temporal difference ----
+    # Temporal difference
     feats["D_Time"] = abs(qi["timestamp"] - qj["timestamp"])
 
-    # ---- STEP 17: same weekday-vs-weekend category ----
+    # Same weekday-vs-weekend category
     feats["S_WeekWeekend"] = int(qi["is_weekend"] == qj["is_weekend"])
 
-    # ---- STEP 18: same 2-hour window of the day ----
+    # Same 2-hour window of the day
     feats["S_SameDaytime"] = int(
         (qi["hour_of_day"] // 2) == (qj["hour_of_day"] // 2)
     )
 
-    # ---- STEP 19: click count difference ----
+    # Click count difference
     feats["D_NumberClicks"] = abs(qi["num_clicks"] - qj["num_clicks"])
 
-    # ---- STEP 20: Jaccard similarity of query term sets ----
+    # Jaccard similarity of query term sets
     terms_i = set(str(qi["Query"]).lower().split())
     terms_j = set(str(qj["Query"]).lower().split())
     feats["S_QueryTerms"] = jaccard(terms_i, terms_j)
 
-    # ---- STEP 21: word count difference ----
+    # Word count difference
     feats["D_QueryTermLen"] = abs(qi["num_terms"] - qj["num_terms"])
 
-    # ---- STEP 22: character length difference ----
+    # Character length difference
     feats["D_QueryCharLen"] = abs(qi["num_chars"] - qj["num_chars"])
 
-    # ---- STEP 23: Levenshtein edit distance between raw query strings ----
-    #  Small distance → user refining a previous query in the same session
+    # Levenshtein edit distance between raw query strings -- Small distance → user refining a previous query in the same session
     feats["D_EditDistance"] = Levenshtein.distance(
         str(qi["Query"]).lower(),
         str(qj["Query"]).lower()
     )
 
-    # ---- STEP 24: term popularity (corpus frequency) difference ----
+    # Term popularity (corpus frequency) difference
     feats["D_QueryTermWeight"] = abs(qi["term_weight"] - qj["term_weight"])
 
-    # ---- STEP 25: spelling error flags ----
-    # Both queries contain at least one spelling error
+    # Spelling error flags -- Both queries contain at least one spelling error
     feats["S_SpellingError1"] = int(
         qi["has_spelling_error"] == 1 and qj["has_spelling_error"] == 1
     )
@@ -132,8 +120,7 @@ def compute_pairwise_features(qi, qj):
         qi["num_spelling_errors"] - qj["num_spelling_errors"]
     )
 
-    # ---- STEP 26: location flags ----
-    # Both mention the exact same city name
+    # Location flags -- Both mention the exact same city name
     feats["S_City"] = int(
         qi["city_name"] != "" and qi["city_name"] == qj["city_name"]
     )
@@ -150,7 +137,7 @@ def compute_pairwise_features(qi, qj):
         qi["has_location"] != qj["has_location"]
     )
 
-    # ---- STEP 27: SBERT semantic similarity ----
+    # SBERT semantic similarity
     # Replaces S_Level2Cat and D_TreeDistance (ODP-based features) from the paper.
     # Cosine similarity between 384-d sentence embeddings captures semantic
     # closeness without requiring an external topic taxonomy.
@@ -159,10 +146,7 @@ def compute_pairwise_features(qi, qj):
     return feats
 
 
-# ---------------------------------------------------------------------------
 # Convert list of feature dicts -> numpy matrix
-# ---------------------------------------------------------------------------
-
 def dicts_to_matrix(pair_dicts):
     """
     Convert a list of pairwise feature dicts into a numpy array.
@@ -177,13 +161,10 @@ def dicts_to_matrix(pair_dicts):
     return X, feature_names
 
 
-# ---------------------------------------------------------------------------
 # Train mode: labeled pairs from held-out users
-# ---------------------------------------------------------------------------
-
 def build_train_pairs(features_list, pairs_per_user, seed):
     """
-    STEP 28-29: Build labeled (qi, qj) pairs from training users.
+    Build labeled (qi, qj) pairs from training users.
 
     For each training user:
       - Sample up to `pairs_per_user` same-real-user pairs  → label 1
@@ -197,8 +178,8 @@ def build_train_pairs(features_list, pairs_per_user, seed):
     random.seed(seed)
 
     # Group queries by user and label
-    user_real  = defaultdict(list)
-    user_fake  = defaultdict(list)
+    user_real = defaultdict(list)
+    user_fake = defaultdict(list)
     for f in features_list:
         if f["Role"] != "train":
             continue
@@ -207,7 +188,7 @@ def build_train_pairs(features_list, pairs_per_user, seed):
         elif f["Label"] == "fake":
             user_fake[f["AnonID"]].append(f)
 
-    all_pairs  = []
+    all_pairs = []
     all_labels = []
 
     for user in tqdm(sorted(user_real.keys()), desc="  Building training pairs"):
@@ -217,7 +198,7 @@ def build_train_pairs(features_list, pairs_per_user, seed):
         if len(reals) < 2:
             continue
 
-        # ---- label-1 pairs: both queries from the same real user ----
+        # Label-1 pairs: both queries from the same real user
         pos_pool = list(combinations(range(len(reals)), 2))
         random.shuffle(pos_pool)
         for i, j in pos_pool[:pairs_per_user]:
@@ -225,7 +206,7 @@ def build_train_pairs(features_list, pairs_per_user, seed):
             all_pairs.append(pf)
             all_labels.append(1)
 
-        # ---- label-0 pairs: one real query + one fake query ----
+        # Label-0 pairs: one real query + one fake query
         if fakes:
             neg_pool = [(ri, fi)
                         for ri in range(len(reals))
@@ -239,10 +220,7 @@ def build_train_pairs(features_list, pairs_per_user, seed):
     return all_pairs, all_labels
 
 
-# ---------------------------------------------------------------------------
 # Target mode: all pairs within the observed stream SO
-# ---------------------------------------------------------------------------
-
 def build_target_pairs(features_list):
     """
     STEP 32: Build every (qi, qj) combination within the target user's
@@ -269,7 +247,7 @@ def build_target_pairs(features_list):
     n_pairs = n * (n - 1) // 2
     print(f"  Target stream: {n} queries → {n_pairs:,} pairs")
 
-    pair_dicts   = []
+    pair_dicts = []
     pair_indices = []
 
     for i, j in tqdm(
@@ -279,14 +257,10 @@ def build_target_pairs(features_list):
     ):
         pf = compute_pairwise_features(target_queries[i], target_queries[j])
         pair_dicts.append(pf)
-        pair_indices.append((i, j))   # positions in target_queries list
+        pair_indices.append((i, j)) # positions in target_queries list
 
     return pair_dicts, pair_indices, target_queries
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 def main():
     args = parse_args()
@@ -300,15 +274,14 @@ def main():
     print(f"  Loaded {len(features_list):,} query feature records")
 
     if args.mode == "train":
-        # ---- STEP 28-29 ----
         pair_dicts, labels = build_train_pairs(
             features_list, args.pairs_per_user, args.seed
         )
         X, feature_names = dicts_to_matrix(pair_dicts)
 
         out = {
-            "X":             X,               # shape (N_pairs, 27)
-            "y":             np.array(labels, dtype=np.int32),
+            "X": X, # shape (N_pairs, 27)
+            "y": np.array(labels, dtype=np.int32),
             "feature_names": feature_names,
         }
         out_path = os.path.join(args.output_dir, "train_pairs.pkl")
@@ -322,15 +295,14 @@ def main():
         print(f"    Negative (real + fake): {neg:,}")
 
     elif args.mode == "target":
-        # ---- STEP 32 ----
         pair_dicts, pair_indices, target_queries = build_target_pairs(features_list)
         X, feature_names = dicts_to_matrix(pair_dicts)
 
         out = {
-            "X":              X,               # shape (N_pairs, 27)
-            "pair_indices":   pair_indices,    # list of (pos_i, pos_j)
-            "feature_names":  feature_names,
-            "target_queries": target_queries,  # ordered SO queries with metadata
+            "X": X, # shape (N_pairs, 27)
+            "pair_indices": pair_indices, # list of (pos_i, pos_j)
+            "feature_names": feature_names,
+            "target_queries": target_queries, # ordered SO queries with metadata
         }
         out_path = os.path.join(args.output_dir, "target_pairs.pkl")
         with open(out_path, "wb") as f:

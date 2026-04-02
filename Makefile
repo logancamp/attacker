@@ -1,6 +1,8 @@
 .PHONY: all dataparse phase0 phase1 phase2 phase3 phase4 phase5 phase6 clean
 
-all_1: dataparse phase0
+clean:
+	rm -rf output pipeline_ready.csv
+	rm -f data/aol_sample.csv data/aol_queries_only.csv data/pipeline_ready_base.csv
 
 # Samples users from the raw AOL dataset -> aol_sample.csv
 dataparse:
@@ -17,9 +19,6 @@ phase0:
 	python phase1.py \
 		--input data/aol_sample.csv \
 		--output data/pipeline_ready_base.csv
-
-
-all_2: phase1 phase2 phase3 phase4 phase5 phase6
 
 # Reads pipeline_ready_base.csv (real only), writes pipeline_ready.csv (real + fakes)
 # Replace with real obfuscation output when ready
@@ -65,6 +64,4 @@ phase6:
 		--attack_metrics output/attack_metrics.pkl \
 		--output_dir output
 
-clean:
-	rm -rf output pipeline_ready.csv
-	rm -f data/aol_sample.csv data/aol_queries_only.csv data/pipeline_ready_base.csv
+all: dataparse phase0 phase1 phase2 phase3 phase4 phase5 phase6

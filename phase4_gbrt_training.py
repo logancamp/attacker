@@ -16,17 +16,13 @@ Output: output_dir/models/model_XX.pkl  (one file per model)
 import argparse
 import os
 import pickle
-
 import joblib
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
 from tqdm import tqdm
 
 
-# ---------------------------------------------------------------------------
 # CLI
-# ---------------------------------------------------------------------------
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 4: GBRT Training")
     parser.add_argument("--pairs",        required=True,
@@ -43,13 +39,10 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
 # Single model training
-# ---------------------------------------------------------------------------
-
 def train_one_model(X, y, subset_frac, random_state):
     """
-    STEP 30-31: Train one GBRT on a random subset of the training data.
+    Train one GBRT on a random subset of the training data.
 
     GBRT hyperparameters:
       n_estimators  - number of boosting rounds (trees). 100 is standard.
@@ -58,7 +51,7 @@ def train_one_model(X, y, subset_frac, random_state):
       subsample     - stochastic gradient boosting: use 80% of data per tree.
                       Adds randomness, improves robustness.
 
-    STEP 31: Each call uses a different random_state, producing a different
+    Each call uses a different random_state, producing a different
     subset selection AND different internal randomness in the GBRT itself.
     """
     n_samples = max(2, int(len(X) * subset_frac))
@@ -80,16 +73,12 @@ def train_one_model(X, y, subset_frac, random_state):
         learning_rate=0.1,
         subsample=0.8,
         random_state=random_state,
-        # verbose=0 to suppress per-tree output
     )
     model.fit(X_sub, y_sub)
     return model
 
 
-# ---------------------------------------------------------------------------
 # Entry point
-# ---------------------------------------------------------------------------
-
 def main():
     args = parse_args()
     models_dir = os.path.join(args.output_dir, "models")
@@ -104,15 +93,15 @@ def main():
     with open(args.pairs, "rb") as f:
         data = pickle.load(f)
 
-    X             = data["X"]               # shape (N_pairs, 27)
-    y             = data["y"]               # shape (N_pairs,)  values 0/1
-    feature_names = data["feature_names"]   # list of 27 names
+    X = data["X"] # shape (N_pairs, 27)
+    y = data["y"] # shape (N_pairs,)  values 0/1
+    feature_names = data["feature_names"] # list of 27 names
 
     print(f"  Training data: {len(X):,} pairs | {X.shape[1]} features")
     print(f"  Class balance: {int(y.sum())} positive (same-source) | "
           f"{int((y == 0).sum())} negative (real+fake)\n")
 
-    # STEP 30-31: Train N models, each on a different random subset
+    # Train N models, each on a different random subset
     importances = []
 
     for i in tqdm(range(args.n_models), desc="  Training models"):
@@ -124,7 +113,7 @@ def main():
 
         importances.append(model.feature_importances_)
 
-    # ---- Feature importance summary ----
+    # Feature importance summary
     mean_imp = np.mean(importances, axis=0)
     # Normalise to 0-100 range (matches Table 4/5 presentation in paper)
     if mean_imp.max() > 0:

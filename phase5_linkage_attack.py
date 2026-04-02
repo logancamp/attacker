@@ -20,7 +20,6 @@ Output: output_dir/cluster_results.csv
 import argparse
 import os
 import pickle
-
 import joblib
 import numpy as np
 import pandas as pd
@@ -28,10 +27,7 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 
-# ---------------------------------------------------------------------------
 # CLI
-# ---------------------------------------------------------------------------
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 5: Linkage Attack")
     parser.add_argument("--target_pairs", required=True,
@@ -43,10 +39,7 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
 # Load models
-# ---------------------------------------------------------------------------
-
 def load_models(models_dir):
     """Load all GBRT model files from models_dir."""
     model_files = sorted([
@@ -64,10 +57,7 @@ def load_models(models_dir):
     return models
 
 
-# ---------------------------------------------------------------------------
-# STEP 33-34: Score pairs through all models, take median
-# ---------------------------------------------------------------------------
-
+# Score pairs through all models, take median
 def score_pairs(X, models):
     """
     STEP 33: Run each pair through every GBRT model.
@@ -88,18 +78,15 @@ def score_pairs(X, models):
         # column 1 = P(same source) = our linkage score
         all_scores[i] = model.predict_proba(X)[:, 1]
 
-    # STEP 34: median across models dimension
+    # median across models dimension
     median_scores = np.median(all_scores, axis=0)   # shape (N_pairs,)
     return median_scores
 
 
-# ---------------------------------------------------------------------------
-# STEP 35: Build N×N similarity matrix
-# ---------------------------------------------------------------------------
-
+# Build N×N similarity matrix
 def build_similarity_matrix(median_scores, pair_indices, n_queries):
     """
-    STEP 35: Arrange the per-pair median linkage scores into an N×N matrix.
+    Arrange the per-pair median linkage scores into an N×N matrix.
 
     pair_indices is a list of (pos_i, pos_j) where pos_i / pos_j are
     0-based positions in the target_queries list (set in phase 3).
@@ -117,13 +104,10 @@ def build_similarity_matrix(median_scores, pair_indices, n_queries):
     return matrix
 
 
-# ---------------------------------------------------------------------------
-# STEP 36: K-means clustering on similarity matrix
-# ---------------------------------------------------------------------------
-
+# K-means clustering on similarity matrix
 def run_kmeans(similarity_matrix, k=2):
     """
-    STEP 36: Cluster the N queries into k=2 groups.
+    Cluster the N queries into k=2 groups.
 
     Each row of the similarity matrix is a query's 'similarity profile' —
     how strongly it links to every other query in SO.
@@ -139,10 +123,7 @@ def run_kmeans(similarity_matrix, k=2):
     return labels
 
 
-# ---------------------------------------------------------------------------
 # Privacy metrics
-# ---------------------------------------------------------------------------
-
 def compute_query_privacy(cluster_labels, true_labels):
     """
     Compute False Positive and False Negative rates for query-level privacy.
@@ -168,20 +149,20 @@ def compute_query_privacy(cluster_labels, true_labels):
     real_mask = true_labels == 1
     fake_mask = true_labels == 0
 
-    real_clusters = cluster_labels[real_mask]   # clusters of real queries
-    fake_clusters = cluster_labels[fake_mask]   # clusters of fake queries
+    real_clusters = cluster_labels[real_mask] # clusters of real queries
+    fake_clusters = cluster_labels[fake_mask] # clusters of fake queries
 
     n_real = real_clusters.shape[0]
     n_fake = fake_clusters.shape[0]
 
-    # ---- False Negatives: real+real pairs split across clusters ----
+    # False Negatives: real+real pairs split across clusters
     # Outer comparison: real_clusters[i] != real_clusters[j]
     fn_matrix      = real_clusters[:, None] != real_clusters[None, :]
     fn_count       = int(fn_matrix.sum()) // 2          # symmetric, divide by 2
     total_rr_pairs = n_real * (n_real - 1) // 2
     fn_rate        = fn_count / total_rr_pairs if total_rr_pairs > 0 else 0.0
 
-    # ---- False Positives: real+fake pairs in the same cluster ----
+    # False Positives: real+fake pairs in the same cluster
     # Cross comparison: real_clusters[i] == fake_clusters[j]
     fp_matrix      = real_clusters[:, None] == fake_clusters[None, :]
     fp_count       = int(fp_matrix.sum())
@@ -189,10 +170,10 @@ def compute_query_privacy(cluster_labels, true_labels):
     fp_rate        = fp_count / total_rf_pairs if total_rf_pairs > 0 else 0.0
 
     return {
-        "fp_rate":        fp_rate,
-        "fn_rate":        fn_rate,
-        "fp_count":       fp_count,
-        "fn_count":       fn_count,
+        "fp_rate": fp_rate,
+        "fn_rate": fn_rate,
+        "fp_count": fp_count,
+        "fn_count": fn_count,
         "total_rr_pairs": total_rr_pairs,
         "total_rf_pairs": total_rf_pairs,
     }
@@ -213,9 +194,6 @@ def label_clusters(cluster_labels, true_labels):
     return real_cluster, fake_cluster
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 def main():
     args = parse_args()
@@ -226,49 +204,49 @@ def main():
     print(f"  Models dir   : {args.models_dir}")
     print(f"  Output dir   : {args.output_dir}\n")
 
-    # ---- Load inputs ----
+    # Load inputs
     with open(args.target_pairs, "rb") as f:
         data = pickle.load(f)
 
-    X              = data["X"]               # shape (N_pairs, 27)
-    pair_indices   = data["pair_indices"]    # list of (pos_i, pos_j)
+    X = data["X"] # shape (N_pairs, 27)
+    pair_indices = data["pair_indices"] # list of (pos_i, pos_j)
     target_queries = data["target_queries"]  # ordered list of query feature dicts
 
     n_queries = len(target_queries)
-    n_pairs   = len(X)
+    n_pairs = len(X)
     print(f"  Target stream : {n_queries} queries | {n_pairs:,} pairs\n")
 
-    # ---- Load models ----
+    # Load models
     models = load_models(args.models_dir)
 
-    # ---- STEP 33-34: Score pairs, take median ----
+    # Score pairs, take median
     print()
     median_scores = score_pairs(X, models)
 
-    # ---- STEP 35: Build similarity matrix ----
+    # Build similarity matrix
     print("\n  Building similarity matrix...")
     sim_matrix = build_similarity_matrix(median_scores, pair_indices, n_queries)
     print(f"  Matrix shape: {sim_matrix.shape}  "
           f"(min={sim_matrix.min():.3f}, max={sim_matrix.max():.3f}, "
           f"mean={sim_matrix.mean():.3f})")
 
-    # ---- STEP 36: K-means k=2 ----
+    # K-means k=2
     print("\n  Running k-means (k=2)...")
     cluster_labels = run_kmeans(sim_matrix, k=2)
 
-    # ---- Ground-truth labels (for evaluation only) ----
+    # Ground-truth labels (for evaluation only)
     true_labels = np.array(
         [1 if q["Label"] == "real" else 0 for q in target_queries],
         dtype=np.int32
     )
 
-    # ---- Decide which cluster = real ----
+    # Decide which cluster = real
     real_cluster, fake_cluster = label_clusters(cluster_labels, true_labels)
 
-    # ---- Query privacy metrics ----
+    # Query privacy metrics
     qp = compute_query_privacy(cluster_labels, true_labels)
 
-    # ---- Build results dataframe ----
+    # Build results dataframe
     predicted_labels = np.where(cluster_labels == real_cluster, "real", "fake")
     results_df = pd.DataFrame({
         "query_id":        [q["query_id"]  for q in target_queries],
@@ -283,7 +261,7 @@ def main():
                            ),
     })
 
-    # ---- Print results ----
+    # Print results
     print(f"\n{'='*50}")
     print(f"  ATTACK RESULTS")
     print(f"{'='*50}")
@@ -310,8 +288,7 @@ def main():
     print(f"  in the profile-building phase using zero-shot classification.")
     print(f"  cluster_results.csv contains the cluster assignments needed.")
 
-    # ---- Save outputs ----
-
+    # Save outputs
     # cluster_results.csv — main output for downstream profile analysis
     results_path = os.path.join(args.output_dir, "cluster_results.csv")
     results_df.to_csv(results_path, index=False)

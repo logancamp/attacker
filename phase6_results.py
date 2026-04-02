@@ -27,7 +27,6 @@ Note: Zero-shot classification requires transformers package.
 import argparse
 import os
 import pickle
-
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
@@ -46,10 +45,7 @@ TOPICS = [
 ]
 
 
-# =============================================================================
 # CLI
-# =============================================================================
-
 def parse_args():
     p = argparse.ArgumentParser(description="Phase 6: Results Summary")
     p.add_argument("--cluster_results", default="output/cluster_results.csv")
@@ -60,14 +56,11 @@ def parse_args():
     return p.parse_args()
 
 
-# =============================================================================
 # Topic profiling via zero-shot classification
-# =============================================================================
-
 def load_classifier():
     """Load zero-shot classification pipeline."""
     try:
-        from transformers import pipeline
+        from transformers import pipeline # type: ignore
         print("  Loading zero-shot classifier (downloads ~1.6 GB on first run)...")
         classifier = pipeline(
             "zero-shot-classification",
@@ -114,33 +107,30 @@ def build_profile(score_matrix):
     return score_matrix.mean(axis=0)
 
 
-# =============================================================================
 # Main
-# =============================================================================
-
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
 
     print(f"\n[PHASE 6] Results Summary\n")
 
-    # ---- load cluster results ----
+    # load cluster results
     results_df = pd.read_csv(args.cluster_results)
     print(f"  Loaded {len(results_df)} query assignments from {args.cluster_results}")
 
-    # ---- load attack metrics ----
+    # load attack metrics
     with open(args.attack_metrics, "rb") as f:
         metrics = pickle.load(f)
 
-    # ---- separate real and predicted-real queries ----
-    true_real      = results_df[results_df["TrueLabel"] == "real"]
+    # separate real and predicted-real queries
+    true_real = results_df[results_df["TrueLabel"] == "real"]
     predicted_real = results_df[results_df["PredictedLabel"] == "real"]
     predicted_fake = results_df[results_df["PredictedLabel"] == "fake"]
 
-    # ---- query privacy metrics ----
-    fp_rate        = metrics["fp_rate"]
-    fn_rate        = metrics["fn_rate"]
-    attack_acc     = metrics["attack_accuracy"]
+    # query privacy metrics
+    fp_rate = metrics["fp_rate"]
+    fn_rate = metrics["fn_rate"]
+    attack_acc = metrics["attack_accuracy"]
 
     print(f"\n  === QUERY PRIVACY METRICS ===")
     print(f"  False Positive Rate : {fp_rate:.4f}  (real+fake merged — higher = better privacy)")
@@ -155,7 +145,7 @@ def main():
         print(f"    Predicted {label:4s}: {len(cluster):4d} queries "
               f"({n_correct} correct, {n_wrong} wrong)")
 
-    # ---- topic profiles ----
+    # topic profiles
     semantic_privacy = None
     profile_df       = None
 
@@ -176,7 +166,7 @@ def main():
         # Semantic privacy = cosine distance between profiles
         # Distance of 0 = identical profiles = no privacy
         # Distance of 1 = completely different profiles = perfect privacy
-        cos_sim          = float(cosine_similarity([true_profile], [infer_profile])[0][0])
+        cos_sim          = float(cosine_similarity([true_profile], [infer_profile])[0][0]) # type: ignore
         semantic_privacy = 1.0 - cos_sim
 
         print(f"\n  Semantic Privacy Score : {semantic_privacy:.4f}  "
@@ -198,19 +188,19 @@ def main():
             print(f"  {row['Topic']:<30s} {row['TrueProfile']:>8.4f}  "
                   f"{row['InferredProfile']:>8.4f}  {row['Difference']:>8.4f}")
 
-    # ---- metrics table ----
+    # metrics table
     metrics_row = {
-        "n_queries":        metrics["n_queries"],
-        "n_real":           len(true_real),
-        "n_fake":           len(results_df) - len(true_real),
-        "fp_rate":          round(fp_rate, 4),
-        "fn_rate":          round(fn_rate, 4),
-        "attack_accuracy":  round(attack_acc, 4),
+        "n_queries": metrics["n_queries"],
+        "n_real": len(true_real),
+        "n_fake": len(results_df) - len(true_real),
+        "fp_rate": round(fp_rate, 4),
+        "fn_rate": round(fn_rate, 4),
+        "attack_accuracy": round(attack_acc, 4),
         "semantic_privacy": round(semantic_privacy, 4) if semantic_privacy is not None else "n/a",
     }
     metrics_table = pd.DataFrame([metrics_row])
 
-    # ---- save outputs ----
+    # save outputs
     metrics_path = os.path.join(args.output_dir, "metrics_table.csv")
     metrics_table.to_csv(metrics_path, index=False)
     print(f"\n  Saved metrics table    -> {metrics_path}")
@@ -220,7 +210,7 @@ def main():
         profile_df.to_csv(profile_path, index=False)
         print(f"  Saved topic profiles   -> {profile_path}")
 
-    # ---- write text report ----
+    # write text report
     report_path = os.path.join(args.output_dir, "results_summary.txt")
     with open(report_path, "w") as f:
         f.write("LINKAGE ATTACK RESULTS SUMMARY\n")
@@ -240,7 +230,7 @@ def main():
             f.write("TOPIC PROFILES\n")
             f.write("-" * 30 + "\n")
             f.write(f"{'Topic':<30s} {'True':>8s}  {'Inferred':>8s}  {'Diff':>8s}\n")
-            for _, row in profile_df.iterrows():
+            for _, row in profile_df.iterrows(): # type: ignore
                 f.write(f"{row['Topic']:<30s} {row['TrueProfile']:>8.4f}  "
                         f"{row['InferredProfile']:>8.4f}  {row['Difference']:>8.4f}\n")
 
