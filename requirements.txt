@@ -1,0 +1,18 @@
+# Web Search Privacy Attack Pipeline - Dependencies
+# Install with: pip install -r requirements.txt
+#
+# NOTE: sentence-transformers will auto-download the all-MiniLM-L6-v2 model
+#       (~90MB) on first run of phase2. Requires internet access on first run.
+#
+# NOTE: Levenshtein is imported as `Levenshtein` in code
+
+pandas>=1.5.0
+numpy>=1.23.0
+scikit-learn>=1.1.0
+sentence-transformers>=2.2.0
+pyspellchecker>=0.7.0
+Levenshtein>=0.20.0
+geonamescache>=1.4.0
+joblib>=1.2.0
+tqdm>=4.64.0
+spellchecker>=0.7.0
