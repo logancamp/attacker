@@ -25,6 +25,12 @@ gen_fakes:
  		--input data/pipeline_ready_base.csv \
  		--output data/pipeline_ready.csv
 
+split_train:
+	python split_train_set.py \
+		--input data/pipeline_ready.csv \
+		--train_out data/train_set.csv \
+		--target_out data/target_set.csv
+
 # TODO: add obfuscation methods here
 # Create and inject fakes, writes with real+fakes
 # Apply DP-Comet obfuscation, writes with real+fakes
