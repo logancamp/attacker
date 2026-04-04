@@ -73,4 +73,4 @@ phase6:
 		--output_dir output
 
 all_easy_fakes: sample gen_fakes phase2 phase3 phase4 phase5 phase6
-all_injected_fakes: phase1 phase2 phase3 phase4 phase5 phase6 #add sample and obfuscation steps when ready
+all_injected_fakes: phase1 phase2 phase3 phase4 phase5 phase6 # add sample and obfuscation steps when ready
