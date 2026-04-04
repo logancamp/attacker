@@ -30,6 +30,9 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers.trainer_utils import set_seed
+from transformers import pipeline # type: ignore
+set_seed(42)
 
 TOPICS = [
     "health and medicine",
@@ -59,7 +62,6 @@ def parse_args():
 def load_classifier():
     """Load zero-shot classification pipeline."""
     try:
-        from transformers import pipeline # type: ignore
         print("  Loading zero-shot classifier (downloads ~1.6 GB on first run)...")
         classifier = pipeline(
             "zero-shot-classification",
