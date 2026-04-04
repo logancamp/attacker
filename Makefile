@@ -1,11 +1,12 @@
-.PHONY: all dataparse phase0 phase1 phase2 phase3 phase4 phase5 phase6 clean
+.PHONY: all sample phase0 phase1 phase2 phase3 phase4 phase5 phase6 clean
 
 clean:
 	rm -rf output pipeline_ready.csv
 	rm -f data/aol_sample.csv data/aol_queries_only.csv data/pipeline_ready_base.csv
 
 # Samples users from the raw AOL dataset -> aol_sample.csv
-dataparse:
+# Adds Label/Role columns to aol_sample.csv, writes pipeline_ready_base.csv
+sample:
 	python sample_aol.py \
 		--input_path data/user-ct-test-collection-02.txt \
 		--output_csv data/aol_sample.csv \
@@ -14,17 +15,24 @@ dataparse:
 		--max_queries_per_user 100 \
 		--session_gap_minutes 30
 
-# Adds Label/Role columns, generates fake queries, applies DP-COMET -> pipeline_ready.csv
-phase0:
+# Reads pipeline_ready_base.csv (real only), writes pipeline_ready.csv (real + fakes)
+gen_fakes:
 	python phase1.py \
 		--input data/aol_sample.csv \
 		--output data/pipeline_ready_base.csv
 
-# Reads pipeline_ready_base.csv (real only), writes pipeline_ready.csv (real + fakes)
-# Replace with real obfuscation output when ready
-phase1:
 	python gen_fakes.py \
-		--input data/pipeline_ready_base.csv \
+ 		--input data/pipeline_ready_base.csv \
+ 		--output data/pipeline_ready.csv
+
+# TODO: add obfuscation methods here
+# Create and inject fakes, writes with real+fakes
+# Apply DP-Comet obfuscation, writes with real+fakes
+
+# Cleans the RQI output, writes aol_rqi_ratio_1_1_english_spanish_french_1-3.csv from fakes additon
+phase1:
+	python temp_clean.py \
+		--input data/aol_rqi_ratio_1_1_english_spanish_french_1-3.csv \
 		--output data/pipeline_ready.csv
 
 # Extracts 16 features per query
@@ -64,4 +72,5 @@ phase6:
 		--attack_metrics output/attack_metrics.pkl \
 		--output_dir output
 
-all: dataparse phase0 phase1 phase2 phase3 phase4 phase5 phase6
+all_easy_fakes: sample gen_fakes phase2 phase3 phase4 phase5 phase6
+all_injected_fakes: phase1 phase2 phase3 phase4 phase5 phase6 #add sample and obfuscation steps when ready
