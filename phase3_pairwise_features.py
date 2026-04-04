@@ -3,7 +3,7 @@ PHASE 3: PAIRWISE FEATURE COMPUTATION
 Compute 27 features describing the relationship between every pair of queries.
 
 Two modes:
-  train  - pairs from held-out (Role='train') users, with labels
+  train  - pairs from (Role='train') users, with labels
              label 1: both queries from same real user  (same source)
              label 0: one real query + one fake query   (different source)
            Output: output_dir/train_pairs.pkl
@@ -39,6 +39,7 @@ def parse_args():
 
 # Similarity helpers
 def jaccard(set_a, set_b):
+    """Jaccard coefficient between two sets. Returns 0 if both empty."""
     if not set_a and not set_b:
         return 0.0
     union = len(set_a | set_b)

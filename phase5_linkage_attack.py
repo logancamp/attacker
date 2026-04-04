@@ -10,7 +10,7 @@ Pipeline:
   5. Run k-means with k=2 → Cluster 'real' | Cluster 'fake'
   6. Compute query-level and semantic privacy metrics
 
-Input : output_dir/target_pairs.pkl   (from phase 3 target mode)
+Input : output_dir/target_pairs.pkl    (from phase 3, target mode)
         output_dir/models/             (from phase 4)
 Output: output_dir/cluster_results.csv
         output_dir/similarity_matrix.pkl
@@ -30,12 +30,9 @@ from tqdm import tqdm
 # CLI
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 5: Linkage Attack")
-    parser.add_argument("--target_pairs", required=True,
-                        help="Path to target_pairs.pkl from phase 3 (target mode)")
-    parser.add_argument("--models_dir",   required=True,
-                        help="Directory containing model_XX.pkl files from phase 4")
-    parser.add_argument("--output_dir",   default="output",
-                        help="Directory for output files")
+    parser.add_argument("--target_pairs", required=True)
+    parser.add_argument("--models_dir", required=True)
+    parser.add_argument("--output_dir", default="output")
     return parser.parse_args()
 
 
@@ -157,17 +154,17 @@ def compute_query_privacy(cluster_labels, true_labels):
 
     # False Negatives: real+real pairs split across clusters
     # Outer comparison: real_clusters[i] != real_clusters[j]
-    fn_matrix      = real_clusters[:, None] != real_clusters[None, :]
-    fn_count       = int(fn_matrix.sum()) // 2          # symmetric, divide by 2
+    fn_matrix = real_clusters[:, None] != real_clusters[None, :]
+    fn_count = int(fn_matrix.sum()) // 2          # symmetric, divide by 2
     total_rr_pairs = n_real * (n_real - 1) // 2
-    fn_rate        = fn_count / total_rr_pairs if total_rr_pairs > 0 else 0.0
+    fn_rate = fn_count / total_rr_pairs if total_rr_pairs > 0 else 0.0
 
     # False Positives: real+fake pairs in the same cluster
     # Cross comparison: real_clusters[i] == fake_clusters[j]
-    fp_matrix      = real_clusters[:, None] == fake_clusters[None, :]
-    fp_count       = int(fp_matrix.sum())
+    fp_matrix = real_clusters[:, None] == fake_clusters[None, :]
+    fp_count = int(fp_matrix.sum())
     total_rf_pairs = n_real * n_fake
-    fp_rate        = fp_count / total_rf_pairs if total_rf_pairs > 0 else 0.0
+    fp_rate = fp_count / total_rf_pairs if total_rf_pairs > 0 else 0.0
 
     return {
         "fp_rate": fp_rate,
@@ -267,10 +264,10 @@ def main():
     print(f"{'='*50}")
     print(f"\n  Cluster composition:")
     for c in [0, 1]:
-        tag    = "REAL" if c == real_cluster else "FAKE"
-        n_r    = int(((cluster_labels == c) & (true_labels == 1)).sum())
-        n_f    = int(((cluster_labels == c) & (true_labels == 0)).sum())
-        total  = n_r + n_f
+        tag = "REAL" if c == real_cluster else "FAKE"
+        n_r = int(((cluster_labels == c) & (true_labels == 1)).sum())
+        n_f = int(((cluster_labels == c) & (true_labels == 0)).sum())
+        total = n_r + n_f
         print(f"    Cluster {c} (→ labeled {tag}): "
               f"{n_r} real + {n_f} fake = {total} total")
 

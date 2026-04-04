@@ -8,7 +8,7 @@ Why 60 models instead of one?
   (phase 5) cancels out subset-specific bias without requiring knowledge of the
   target user. See paper Section 4.1.3.
 
-Input : output_dir/train_pairs.pkl   (from phase 3 train mode)
+Input : output_dir/train_pairs.pkl   (from phase 3, train mode)
 Output: output_dir/models/model_XX.pkl  (one file per model)
         output_dir/models/metadata.pkl  (feature importance summary)
 """
