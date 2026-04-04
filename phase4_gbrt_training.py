@@ -25,17 +25,10 @@ from tqdm import tqdm
 # CLI
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 4: GBRT Training")
-    parser.add_argument("--pairs",        required=True,
-                        help="Path to train_pairs.pkl from phase 3")
-    parser.add_argument("--output_dir",   default="output",
-                        help="Directory for output files")
-    parser.add_argument("--n_models",     type=int, default=60,
-                        help="Number of GBRT models to train (default: 60). "
-                             "Use 10-15 for faster runs during development.")
-    parser.add_argument("--subset_frac",  type=float, default=0.7,
-                        help="Fraction of training pairs used per model "
-                             "(default: 0.7). Each model sees a different "
-                             "random 70%% of the data.")
+    parser.add_argument("--pairs", required=True)
+    parser.add_argument("--output_dir", default="output")
+    parser.add_argument("--n_models", type=int, default=60)
+    parser.add_argument("--subset_frac", type=float, default=0.7)
     return parser.parse_args()
 
 

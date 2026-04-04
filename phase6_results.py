@@ -49,10 +49,9 @@ TOPICS = [
 def parse_args():
     p = argparse.ArgumentParser(description="Phase 6: Results Summary")
     p.add_argument("--cluster_results", default="output/cluster_results.csv")
-    p.add_argument("--attack_metrics",  default="output/attack_metrics.pkl")
-    p.add_argument("--output_dir",      default="output")
-    p.add_argument("--no_profiles",     action="store_true",
-                   help="Skip zero-shot topic profiling (faster, no transformers needed)")
+    p.add_argument("--attack_metrics", default="output/attack_metrics.pkl")
+    p.add_argument("--output_dir", default="output")
+    p.add_argument("--no_profiles", action="store_true",)
     return p.parse_args()
 
 
@@ -141,13 +140,13 @@ def main():
     for label in ["real", "fake"]:
         cluster = results_df[results_df["PredictedLabel"] == label]
         n_correct = (cluster["TrueLabel"] == label).sum()
-        n_wrong   = (cluster["TrueLabel"] != label).sum()
+        n_wrong = (cluster["TrueLabel"] != label).sum()
         print(f"    Predicted {label:4s}: {len(cluster):4d} queries "
               f"({n_correct} correct, {n_wrong} wrong)")
 
     # topic profiles
     semantic_privacy = None
-    profile_df       = None
+    profile_df = None
 
     if not args.no_profiles:
         print(f"\n  === TOPIC PROFILES ===")
@@ -155,18 +154,18 @@ def main():
 
         # True profile: built from ground-truth real queries
         print(f"  Classifying {len(true_real)} true real queries...")
-        true_scores   = classify_queries(true_real["Query"].tolist(), classifier)
-        true_profile  = build_profile(true_scores)
+        true_scores = classify_queries(true_real["Query"].tolist(), classifier)
+        true_profile = build_profile(true_scores)
 
         # Inferred profile: built from what adversary labeled as real
         print(f"  Classifying {len(predicted_real)} adversary-predicted real queries...")
-        infer_scores   = classify_queries(predicted_real["Query"].tolist(), classifier)
-        infer_profile  = build_profile(infer_scores)
+        infer_scores = classify_queries(predicted_real["Query"].tolist(), classifier)
+        infer_profile = build_profile(infer_scores)
 
         # Semantic privacy = cosine distance between profiles
         # Distance of 0 = identical profiles = no privacy
         # Distance of 1 = completely different profiles = perfect privacy
-        cos_sim          = float(cosine_similarity([true_profile], [infer_profile])[0][0]) # type: ignore
+        cos_sim = float(cosine_similarity([true_profile], [infer_profile])[0][0]) # type: ignore
         semantic_privacy = 1.0 - cos_sim
 
         print(f"\n  Semantic Privacy Score : {semantic_privacy:.4f}  "
@@ -175,10 +174,10 @@ def main():
 
         # Build profile comparison table
         profile_df = pd.DataFrame({
-            "Topic":          TOPICS,
-            "TrueProfile":    np.round(true_profile,  4),
+            "Topic": TOPICS,
+            "TrueProfile": np.round(true_profile,  4),
             "InferredProfile": np.round(infer_profile, 4),
-            "Difference":     np.round(np.abs(true_profile - infer_profile), 4),
+            "Difference": np.round(np.abs(true_profile - infer_profile), 4),
         }).sort_values("TrueProfile", ascending=False).reset_index(drop=True)
 
         print(f"\n  Topic profile comparison (true vs adversary inferred):")

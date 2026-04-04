@@ -38,7 +38,6 @@ def parse_args():
 
 # Data loading
 def load_data(input_path):
-    """Load CSV and validate required columns exist."""
     df = pd.read_csv(input_path)
 
     required = ["AnonID", "Query", "QueryTime", "Label", "Role"]
@@ -48,10 +47,10 @@ def load_data(input_path):
 
     # Normalise types
     df["QueryTime"] = pd.to_datetime(df["QueryTime"])
-    df["ClickURL"]  = df.get("ClickURL",  pd.Series("", index=df.index)).fillna("")
-    df["Query"]     = df["Query"].fillna("").astype(str)
-    df["Label"]     = df["Label"].str.strip().str.lower()
-    df["Role"]      = df["Role"].str.strip().str.lower()
+    df["ClickURL"] = df.get("ClickURL",  pd.Series("", index=df.index)).fillna("")
+    df["Query"] = df["Query"].fillna("").astype(str)
+    df["Label"] = df["Label"].str.strip().str.lower()
+    df["Role"] = df["Role"].str.strip().str.lower()
 
     print(f"  Loaded {len(df):,} rows | "
           f"{df['AnonID'].nunique()} users | "
@@ -80,7 +79,7 @@ def get_location_sets():
     using the geonamescache package (no external API needed).
     """
     gc = geonamescache.GeonamesCache()
-    cities    = {c["name"].lower() for c in gc.get_cities().values()}
+    cities = {c["name"].lower() for c in gc.get_cities().values()}
     countries = {c["name"].lower() for c in gc.get_countries().values()}
     return cities, countries
 
@@ -124,16 +123,16 @@ def extract_features(df):
 
     # Batch-encode all queries at once (much faster than one-by-one)
     print("  Batch encoding queries with SBERT...")
-    all_queries  = df["Query"].tolist()
-    embeddings   = sbert.encode(all_queries, batch_size=64, show_progress_bar=True)
+    all_queries = df["Query"].tolist()
+    embeddings = sbert.encode(all_queries, batch_size=64, show_progress_bar=True)
 
 
     features_list = []
     for row_pos, (idx, row) in enumerate(
         tqdm(df.iterrows(), total=len(df), desc="  Extracting features")
     ):
-        query  = str(row["Query"]).lower()
-        terms  = query.split()
+        query = str(row["Query"]).lower()
+        terms = query.split()
         termset = set(terms)
 
         # Raw Unix timestamp
@@ -142,7 +141,7 @@ def extract_features(df):
         # Day of week (0=Mon … 6=Sun) and hour of day (0-23)
         day_of_week = row["QueryTime"].dayofweek
         hour_of_day = row["QueryTime"].hour
-        is_weekend  = int(day_of_week >= 5)
+        is_weekend = int(day_of_week >= 5)
 
         # Number of clicked results for this query event
         num_clicks = click_counts.get((row["AnonID"], row["QueryTime"]), 0)
@@ -155,18 +154,18 @@ def extract_features(df):
         num_chars = len(query)
 
         # Spelling errors
-        misspelled         = spell.unknown(terms)
+        misspelled = spell.unknown(terms)
         num_spelling_errors = len(misspelled)
-        has_spelling_error  = int(num_spelling_errors > 0)
+        has_spelling_error = int(num_spelling_errors > 0)
 
         # Location terms (city / country mentions)
-        query_cities    = [t for t in terms if t in cities]
+        query_cities = [t for t in terms if t in cities]
         query_countries = [t for t in terms if t in countries]
-        has_city        = int(bool(query_cities))
-        has_country     = int(bool(query_countries))
-        has_location    = int(has_city or has_country)
-        city_name       = query_cities[0]    if query_cities    else ""
-        country_name    = query_countries[0] if query_countries else ""
+        has_city = int(bool(query_cities))
+        has_country = int(bool(query_countries))
+        has_location = int(has_city or has_country)
+        city_name = query_cities[0] if query_cities else ""
+        country_name = query_countries[0] if query_countries else ""
 
         # Query term popularity (sum of each term's corpus frequency — popular terms = high weight)
         term_weight = sum(term_popularity.get(t, 0.0) for t in terms)

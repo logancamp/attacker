@@ -28,20 +28,13 @@ import pandas as pd
 
 # CLI
 def parse_args():
-    p = argparse.ArgumentParser(description="Phase 0: Data Preparation")
-    p.add_argument("--input",           default="aol_sample.csv",
-                   help="Path to aol_sample.csv (default: aol_sample.csv)")
-    p.add_argument("--output",          default="pipeline_ready.csv",
-                   help="Output CSV path (default: pipeline_ready.csv)")
-    p.add_argument("--target_user",     type=int, default=None,
-                   help="AnonID of the user to attack. "
-                        "If omitted, the user with the most queries is chosen.")
-    p.add_argument("--min_queries",     type=int, default=20,
-                   help="Minimum queries a user must have to be included "
-                        "(default: 20).")
-    p.add_argument("--max_train_users", type=int, default=None,
-                   help="Cap the number of training users (default: all).")
-    p.add_argument("--seed",            type=int, default=42)
+    p = argparse.ArgumentParser(description="Data Preparation")
+    p.add_argument("--input", default="aol_sample.csv")
+    p.add_argument("--output", default="pipeline_ready.csv")
+    p.add_argument("--target_user", type=int, default=None)
+    p.add_argument("--min_queries", type=int, default=20)
+    p.add_argument("--max_train_users", type=int, default=None)
+    p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
 
 
@@ -54,17 +47,17 @@ def prepare(args):
     # load
     df = pd.read_csv(args.input)
     df["QueryTime"] = pd.to_datetime(df["QueryTime"])
-    df["Query"]     = df["Query"].fillna("").astype(str)
-    df["ClickURL"]  = df.get("ClickURL", pd.Series("", index=df.index)).fillna("")
-    df["ItemRank"]  = df.get("ItemRank", pd.Series("", index=df.index)).fillna("")
+    df["Query"] = df["Query"].fillna("").astype(str)
+    df["ClickURL"] = df.get("ClickURL", pd.Series("", index=df.index)).fillna("")
+    df["ItemRank"] = df.get("ItemRank", pd.Series("", index=df.index)).fillna("")
     df = df.drop(columns=["SessionID"], errors="ignore")
 
     print(f"  Loaded {len(df):,} rows | {df['AnonID'].nunique():,} users")
 
     # filter users with too few queries
     query_counts = df.groupby("AnonID").size()
-    eligible     = query_counts[query_counts >= args.min_queries].index
-    df           = df[df["AnonID"].isin(eligible)]
+    eligible = query_counts[query_counts >= args.min_queries].index
+    df = df[df["AnonID"].isin(eligible)]
     print(f"  After min_queries={args.min_queries} filter: "
           f"{df['AnonID'].nunique():,} users | {len(df):,} rows")
 
@@ -87,16 +80,16 @@ def prepare(args):
     # cap training users if requested
     train_ids = [uid for uid in eligible if uid != target_id]
     if args.max_train_users is not None and len(train_ids) > args.max_train_users:
-        rng       = np.random.default_rng(args.seed)
+        rng = np.random.default_rng(args.seed)
         train_ids = list(rng.choice(train_ids, size=args.max_train_users, replace=False))
         print(f"  Capped training users to {args.max_train_users}")
 
     all_ids = train_ids + [target_id]
-    df      = df[df["AnonID"].isin(all_ids)].copy()
+    df = df[df["AnonID"].isin(all_ids)].copy()
 
     # assign Label and Role
     df["Label"] = "real"
-    df["Role"]  = df["AnonID"].apply(lambda uid: "target" if uid == target_id else "train")
+    df["Role"] = df["AnonID"].apply(lambda uid: "target" if uid == target_id else "train")
 
     # sort chronologically
     df = df.sort_values(["AnonID", "QueryTime"]).reset_index(drop=True)

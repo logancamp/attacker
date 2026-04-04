@@ -302,14 +302,14 @@ def main():
 
     # attack_metrics.pkl — all numeric metrics for comparison across conditions
     metrics = {
-        "n_queries":      n_queries,
-        "n_pairs":        n_pairs,
-        "real_cluster":   real_cluster,
-        "fake_cluster":   fake_cluster,
-        "fp_rate":        qp["fp_rate"],
-        "fn_rate":        qp["fn_rate"],
-        "fp_count":       qp["fp_count"],
-        "fn_count":       qp["fn_count"],
+        "n_queries": n_queries,
+        "n_pairs": n_pairs,
+        "real_cluster": real_cluster,
+        "fake_cluster": fake_cluster,
+        "fp_rate": qp["fp_rate"],
+        "fn_rate": qp["fn_rate"],
+        "fp_count": qp["fp_count"],
+        "fn_count": qp["fn_count"],
         "total_rr_pairs": qp["total_rr_pairs"],
         "total_rf_pairs": qp["total_rf_pairs"],
         "attack_accuracy": overall_acc,

@@ -29,24 +29,16 @@ import Levenshtein # type: ignore
 # CLI
 def parse_args():
     parser = argparse.ArgumentParser(description="Phase 3: Pairwise Feature Computation")
-    parser.add_argument("--features",       required=True,
-                        help="Path to query_features.pkl from phase 2")
-    parser.add_argument("--mode",           required=True, choices=["train", "target"],
-                        help="'train' for labeled pairs, 'target' for attack pairs")
-    parser.add_argument("--output_dir",     default="output",
-                        help="Directory for output files")
-    parser.add_argument("--pairs_per_user", type=int, default=500,
-                        help="Max same-source and cross-source pairs sampled per "
-                             "training user (default: 500 each). "
-                             "Increase for more training data, decrease to save memory.")
-    parser.add_argument("--seed",           type=int, default=42,
-                        help="Random seed for pair sampling (default: 42)")
+    parser.add_argument("--features", required=True)
+    parser.add_argument("--mode", required=True, choices=["train", "target"])
+    parser.add_argument("--output_dir", default="output")
+    parser.add_argument("--pairs_per_user", type=int, default=500)
+    parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
 
 
 # Similarity helpers
 def jaccard(set_a, set_b):
-    """Jaccard coefficient between two sets. Returns 0 if both empty."""
     if not set_a and not set_b:
         return 0.0
     union = len(set_a | set_b)
