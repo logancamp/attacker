@@ -1,13 +1,11 @@
 """
 temp_clean.py
 
-Converts the Random Query Injection output CSV from the obfuscation team
+Converts the Random Query Injection output CSV from the obfuscation code
 into the format expected by phases 2-5.
 
-Idempotent — safe to run on already-cleaned files.
-
 Problems this fixes (skipped if already done):
-  1. Fake rows have null AnonID   -> filled from the real row in the same group_id
+  1. Fake rows have null AnonID -> filled from the real row in the same group_id
   2. Fake rows have null QueryTime -> assigned from the paired real row's timestamp
   3. Column 'label' renamed to 'Label'
   4. 'Role' column added
@@ -21,11 +19,11 @@ import pandas as pd
 
 def parse_args():
     p = argparse.ArgumentParser(description="Clean RQI output for attack pipeline")
-    p.add_argument("--input",       required=True)
-    p.add_argument("--output",      default="pipeline_ready.csv")
+    p.add_argument("--input", required=True)
+    p.add_argument("--output", default="pipeline_ready.csv")
     p.add_argument("--target_user", type=int, default=None)
     p.add_argument("--min_queries", type=int, default=20)
-    p.add_argument("--seed",        type=int, default=42)
+    p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
 
 
@@ -38,14 +36,14 @@ def main():
     df = pd.read_csv(args.input)
     print(f"  Loaded {len(df):,} rows | Columns: {list(df.columns)}")
 
-    # ---- Step 1: rename label -> Label if needed ----
+    # rename label -> Label if needed
     if "label" in df.columns and "Label" not in df.columns:
         df = df.rename(columns={"label": "Label"})
         print("  Renamed 'label' -> 'Label'")
     elif "Label" in df.columns:
         print("  'Label' column already present, skipping rename")
 
-    # ---- Step 2: fill AnonID for fake rows if needed ----
+    # fill AnonID for fake rows if needed
     if "group_id" in df.columns and df["AnonID"].isna().any():
         print("  Filling null AnonIDs from group_id...")
         group_to_user = (
@@ -65,7 +63,7 @@ def main():
 
     df["AnonID"] = df["AnonID"].astype(int)
 
-    # ---- Step 3: fill QueryTime for fake rows if needed ----
+    # fill QueryTime for fake rows if needed
     df["QueryTime"] = pd.to_datetime(df["QueryTime"], errors="coerce")
     if "group_id" in df.columns and df["QueryTime"].isna().any():
         print("  Filling null QueryTimes from group_id...")
@@ -77,7 +75,7 @@ def main():
         )
         fake_mask = df["Label"] == "fake"
         for idx in df[fake_mask & df["QueryTime"].isna()].index:
-            gid    = df.at[idx, "group_id"]
+            gid = df.at[idx, "group_id"]
             base_t = group_to_time.get(gid)
             if base_t:
                 df.at[idx, "QueryTime"] = pd.to_datetime(base_t) + \
@@ -85,26 +83,26 @@ def main():
     else:
         print("  QueryTime already populated, skipping fill")
 
-    # ---- Step 4: drop extra columns ----
+    # drop extra columns
     drop_cols = ["SessionID", "language", "ratio_setting", "group_id", "word_count"]
-    present   = [c for c in drop_cols if c in df.columns]
+    present = [c for c in drop_cols if c in df.columns]
     if present:
         df = df.drop(columns=present)
         print(f"  Dropped extra columns: {present}")
 
-    # ---- Step 5: clean up ----
-    df["Query"]    = df["Query"].fillna("").astype(str)
+    # clean up
+    df["Query"] = df["Query"].fillna("").astype(str)
     df["ClickURL"] = df.get("ClickURL", pd.Series("", index=df.index)).fillna("")
     df["ItemRank"] = df.get("ItemRank", pd.Series("", index=df.index)).fillna("")
 
-    # ---- Step 6: filter users with too few real queries ----
+    # filter users with too few real queries
     real_counts = df[df["Label"] == "real"].groupby("AnonID").size()
-    eligible    = real_counts[real_counts >= args.min_queries].index
-    df          = df[df["AnonID"].isin(eligible)]
+    eligible = real_counts[real_counts >= args.min_queries].index
+    df = df[df["AnonID"].isin(eligible)]
     print(f"  After min_queries={args.min_queries} filter: "
           f"{df['AnonID'].nunique():,} users | {len(df):,} rows")
 
-    # ---- Step 7: assign Role if needed ----
+    # assign Role if needed
     if "Role" in df.columns:
         print("  'Role' column already present, skipping assignment")
     else:
@@ -119,11 +117,11 @@ def main():
             lambda uid: "target" if uid == target_id else "train"
         )
 
-    # ---- Step 8: sort and validate ----
+    # sort and validate
     df = df.sort_values(["AnonID", "QueryTime"]).reset_index(drop=True)
 
     required = ["AnonID", "Query", "QueryTime", "Label", "Role"]
-    missing  = [c for c in required if c not in df.columns]
+    missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"Output is still missing required columns: {missing}")
 
