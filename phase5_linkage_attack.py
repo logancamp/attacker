@@ -24,6 +24,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from tqdm import tqdm
 
 
@@ -231,6 +232,11 @@ def main():
     print("\n  Running k-means (k=2)...")
     cluster_labels = run_kmeans(sim_matrix, k=2)
 
+    # query structure privacy evaluation 
+    qsp_score = silhouette_score(sim_matrix, cluster_labels)
+
+    
+
     # Ground-truth labels (for evaluation only)
     true_labels = np.array(
         [1 if q["Label"] == "real" else 0 for q in target_queries],
@@ -281,9 +287,15 @@ def main():
     print(f"\n  Overall attack accuracy: {overall_acc:.4f}  "
           f"(lower = better privacy for user)")
 
+     # silhouette_score stuff
+    print(f"\n  Silhouette score: {qsp_score}")
+
+
     print(f"\n  NOTE: Semantic privacy (profile cosine distance) is computed")
     print(f"  in the profile-building phase using zero-shot classification.")
     print(f"  cluster_results.csv contains the cluster assignments needed.")
+    
+   
 
     # Save outputs
     # cluster_results.csv — main output for downstream profile analysis
@@ -310,6 +322,7 @@ def main():
         "total_rr_pairs": qp["total_rr_pairs"],
         "total_rf_pairs": qp["total_rf_pairs"],
         "attack_accuracy": overall_acc,
+        "silhouette_score": qsp_score
     }
     metrics_path = os.path.join(args.output_dir, "attack_metrics.pkl")
     with open(metrics_path, "wb") as f:

@@ -15,4 +15,3 @@ Levenshtein>=0.20.0
 geonamescache>=1.4.0
 joblib>=1.2.0
 tqdm>=4.64.0
-spellchecker>=0.7.0

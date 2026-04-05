@@ -223,7 +223,8 @@ def main():
         f.write("-" * 30 + "\n")
         f.write(f"False Positive Rate: {fp_rate:.4f}\n")
         f.write(f"False Negative Rate: {fn_rate:.4f}\n")
-        f.write(f"Attack Accuracy:     {attack_acc:.4f}\n\n")
+        f.write(f"Attack Accuracy:     {attack_acc:.4f}\n")
+        f.write(f"Silhouette Score:   {metrics['silhouette_score']}\n\n")
         if semantic_privacy is not None:
             f.write("SEMANTIC PRIVACY\n")
             f.write("-" * 30 + "\n")
