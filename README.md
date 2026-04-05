@@ -62,3 +62,13 @@ python DP-COMET/main.py --dataset [input path, ex. data/samples/aol_queries_only
 ### Output
 
 Results appear in DP-COMET/data/[input path], where each csv is labeled with the level of epsilon.
+
+### Relative Privacy Evaluation
+
+ - `--control` (required): Path to control output folder
+ - `--experiment` (required): Path to experiment output folder
+ - `--output-dir` (default: output): Path to output the csv
+
+ ### Output
+
+ Results appear in output-dir/relative_privacy.csv
