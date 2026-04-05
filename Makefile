@@ -16,9 +16,10 @@ sample:
 		--session_gap_minutes 30
 
 # Reads pipeline_ready_base.csv (real only), writes pipeline_ready.csv (real + fakes)
+INPUT ?= data/aol_sample.csv
 gen_fakes:
 	python phase1.py \
-		--input data/aol_sample.csv \
+		--input $(INPUT) \
 		--output data/pipeline_ready_base.csv
 
 	python gen_fakes.py \
@@ -36,15 +37,16 @@ split_train:
 # Apply DP-Comet obfuscation, writes with real+fakes
 
 # Cleans the RQI output, writes aol_rqi_ratio_1_1_english_spanish_french_1-3.csv from fakes additon
-phase1:
+RQI_INPUT ?= data/aol_rqi_ratio_1_1_english_spanish_french_1-3.csv
+clean_rqi_output:
 	python temp_clean.py \
-		--input data/aol_rqi_ratio_1_1_english_spanish_french_1-3.csv \
+		--input $(RQI_INPUT) \
 		--output data/pipeline_ready.csv
 
-# Extracts 16 features per query
+# Extracts 16 features per query - change input path to obfuscation when needed
 phase2:
 	python phase2_feature_extraction.py \
-		--input data/pipeline_ready.csv \
+		--input data/obfuscatedText_DP-COMET-Mhl_10.csv \
 		--output_dir output
 
 # Builds pairwise features for training and attack
@@ -78,5 +80,7 @@ phase6:
 		--attack_metrics output/attack_metrics.pkl \
 		--output_dir output
 
-all_easy_fakes: sample gen_fakes phase2 phase3 phase4 phase5 phase6
-all_injected_fakes: phase1 phase2 phase3 phase4 phase5 phase6 # add sample and obfuscation steps when ready
+all_easy_fakes: sample gen_fakes phase2 phase3 phase4 phase5 phase6 # assign correct input to gen_fakes (data/aol_sample.csv)
+all_ob_easy_fakes: gen_fakes phase2 phase3 phase4 phase5 phase6 # assign correct input to gen_fakes (data/obfuscated_aol_sample.csv)
+all_injected_fakes: clean_rqi_output phase2 phase3 phase4 phase5 phase6 # assign correct input to clean_rqi_output (data/aol_rqi_ratio_1_1_english_spanish_french_1-3.csv)
+all_ob_injected_fakes: phase2 phase3 phase4 phase5 phase6 # assign correct input to clean_rqi_output (data/aol_rqi_ratio_1_1_english_spanish_french_1-3.csv)
